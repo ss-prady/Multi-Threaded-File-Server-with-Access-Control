@@ -9,54 +9,103 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+typedef struct {
+    char username[50];
+    char password[50];
+    char role[10]; // "read" or "write"
+} User;
+
+User users[100];
+int user_count = 0;
+
+void load_users(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Could not open users file");
+        exit(EXIT_FAILURE);
+    }
+
+    char line[150];
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = 0;
+        sscanf(line, "%[^:]:%[^:]:%s", users[user_count].username, users[user_count].password, users[user_count].role);
+        user_count++;
+    }
+    fclose(file);
+}
+
+User *authenticate(const char *username, const char *password) {
+    for (int i = 0; i < user_count; i++) {
+        if (strcmp(users[i].username, username) == 0 && strcmp(users[i].password, password) == 0) {
+            return &users[i];
+        }
+    }
+    return NULL;
+}
+
 void *handle_client(void *arg) {
     int client_socket = *(int *)arg;
     free(arg);
 
     char buffer[BUFFER_SIZE] = {0};
 
+    // --- Authentication ---
+    char username[50], password[50];
+    recv(client_socket, username, sizeof(username), 0);
+    recv(client_socket, password, sizeof(password), 0);
+
+    User *user = authenticate(username, password);
+    if (!user) {
+        char *fail_msg = "AUTH_FAIL";
+        send(client_socket, fail_msg, strlen(fail_msg), 0);
+        close(client_socket);
+        return NULL;
+    }
+
+    char *success_msg = "AUTH_SUCCESS";
+    send(client_socket, success_msg, strlen(success_msg), 0);
+
+    // --- Command loop ---
     while (1) {
         memset(buffer, 0, BUFFER_SIZE);
         int bytes = recv(client_socket, buffer, BUFFER_SIZE, 0);
         if (bytes <= 0) break;
 
-        buffer[bytes] = '\0'; // Ensure null termination
-        printf("Received: %s\n", buffer);
+        buffer[bytes] = '\0';
+        printf("[%s] Command: %s\n", user->username, buffer);
 
-        // Handle upload
         if (strncmp(buffer, "upload ", 7) == 0) {
-            char *filename = buffer + 7;
+            if (strcmp(user->role, "write") != 0) {
+                send(client_socket, "Permission denied", 18, 0);
+                continue;
+            }
 
+            char *filename = buffer + 7;
             FILE *fp = fopen(filename, "wb");
             if (!fp) {
                 perror("Server: Error creating file");
                 break;
             }
 
-            // Notify client to send file
             send(client_socket, "READY", 5, 0);
 
-            // Receive file contents
             while (1) {
                 memset(buffer, 0, BUFFER_SIZE);
                 int bytes_read = recv(client_socket, buffer, BUFFER_SIZE, 0);
-            
-                if (bytes_read <= 0)
-                    break;
-            
-                // Check if this is the EOF signal
-                if (bytes_read == 3 && memcmp(buffer, "EOF", 3) == 0)
-                    break;
-            
+                if (bytes_read <= 0 || strcmp(buffer, "EOF") == 0) break;
                 fwrite(buffer, sizeof(char), bytes_read, fp);
             }
 
             fclose(fp);
             printf("Upload complete.\n");
             send(client_socket, "Upload successful", 17, 0);
-        }
-        //Handle download
-        else if (strncmp(buffer, "download ", 9) == 0) {
+
+        } else if (strncmp(buffer, "download ", 9) == 0) {
+            if (strcmp(user->role, "read") != 0) {
+                send(client_socket, "Permission denied", 18, 0);
+                continue;
+            }
+
             char *filename = buffer + 9;
             FILE *fp = fopen(filename, "rb");
         
@@ -65,6 +114,10 @@ void *handle_client(void *arg) {
                 send(client_socket, "ERROR: File not found", 22, 0);
                 continue;
             }
+
+            send(client_socket, "READY", 5, 0);
+            sleep(1);  // Optional delay to avoid overlapping with file data
+
         
             // Send the file contents
             while ((bytes = fread(buffer, 1, BUFFER_SIZE, fp)) > 0) {
@@ -77,16 +130,11 @@ void *handle_client(void *arg) {
             send(client_socket, "EOF", 3, 0);
             printf("Sent file %s to client.\n", filename);
         }
-        
 
         else {
-            // If not a command, treat it as a normal message
-            printf("Message: %s\n", buffer);
-
-            // Echo a reply
-            char response[BUFFER_SIZE];
-            snprintf(response, BUFFER_SIZE, "I received: %s", buffer);
-            send(client_socket, response, strlen(response), 0);
+            char msg[BUFFER_SIZE];
+            snprintf(msg, BUFFER_SIZE, "[%s]: I received: %s", user->username, buffer);
+            send(client_socket, msg, strlen(msg), 0);
         }
     }
 
@@ -94,12 +142,12 @@ void *handle_client(void *arg) {
     return NULL;
 }
 
-
-
 int main() {
     int server_fd, *new_sock;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
+
+    load_users("users.txt");
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == 0) {
@@ -121,7 +169,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Multi-threaded Server listening on port %d...\n", PORT);
+    printf("Server listening on port %d...\n", PORT);
 
     while (1) {
         int client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
@@ -135,7 +183,7 @@ int main() {
 
         pthread_t tid;
         pthread_create(&tid, NULL, handle_client, new_sock);
-        pthread_detach(tid);  // no need to join, auto-cleans thread resources
+        pthread_detach(tid);
     }
 
     close(server_fd);

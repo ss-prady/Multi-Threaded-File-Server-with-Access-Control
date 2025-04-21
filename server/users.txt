@@ -1,0 +1,4 @@
+alice:alice123:read
+bob:bob456:write
+carol:carol789:read
+dave:davepass:write
