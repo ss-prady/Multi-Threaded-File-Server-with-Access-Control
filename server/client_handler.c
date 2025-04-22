@@ -76,7 +76,7 @@ void *handle_client(void *arg) {
             send(client_socket, "Upload successful", 17, 0);
 
         } else if (strncmp(buffer, "download ", 9) == 0) {
-            if (strcmp(user->role, "read") != 0) {
+            if (strcmp(user->role, "read") != 0 || strcmp(user->role, "write") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
                 continue;
             }
