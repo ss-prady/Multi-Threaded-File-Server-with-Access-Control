@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/file_server.dir/server.c.o CMakeFiles/file_server.dir/user_auth.c.o CMakeFiles/file_server.dir/client_handler.c.o -o file_server  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

@@ -8,7 +8,7 @@ This is a multi-threaded file server with secure user authentication and access 
 - Role-based access control (read/write permissions)
 - File upload and download functionality
 - Multi-threaded client handling
-
+****
 ## Building the Server
 
 To build the server, you'll need CMake (version 3.10 or higher), a C compiler, and OpenSSL development libraries.

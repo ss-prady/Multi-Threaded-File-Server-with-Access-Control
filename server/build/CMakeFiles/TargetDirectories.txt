@@ -1,8 +1,0 @@
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/file_server.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/user_manager.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/edit_cache.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/rebuild_cache.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/list_install_components.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/install.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/install/local.dir
-/home/abdullah/Desktop/Projects/Multi-Threaded-File-Server-with-Access-Control/server/build/CMakeFiles/install/strip.dir

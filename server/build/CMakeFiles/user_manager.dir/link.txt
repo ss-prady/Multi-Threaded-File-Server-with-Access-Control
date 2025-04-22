@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/user_manager.dir/user_manager.c.o CMakeFiles/user_manager.dir/user_auth.c.o -o user_manager  /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 
