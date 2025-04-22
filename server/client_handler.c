@@ -1,47 +1,9 @@
-// threaded_server.c
+#include "client_handler.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <arpa/inet.h>
-
-#define PORT 8080
-#define BUFFER_SIZE 1024
-
-typedef struct {
-    char username[50];
-    char password[50];
-    char role[10]; // "read" or "write"
-} User;
-
-User users[100];
-int user_count = 0;
-
-void load_users(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        perror("Could not open users file");
-        exit(EXIT_FAILURE);
-    }
-
-    char line[150];
-    while (fgets(line, sizeof(line), file)) {
-        line[strcspn(line, "\n")] = 0;
-        sscanf(line, "%[^:]:%[^:]:%s", users[user_count].username, users[user_count].password, users[user_count].role);
-        user_count++;
-    }
-    fclose(file);
-}
-
-User *authenticate(const char *username, const char *password) {
-    for (int i = 0; i < user_count; i++) {
-        if (strcmp(users[i].username, username) == 0 && strcmp(users[i].password, password) == 0) {
-            return &users[i];
-        }
-    }
-    return NULL;
-}
 
 void *handle_client(void *arg) {
     int client_socket = *(int *)arg;
@@ -118,7 +80,6 @@ void *handle_client(void *arg) {
             send(client_socket, "READY", 5, 0);
             sleep(1);  // Optional delay to avoid overlapping with file data
 
-        
             // Send the file contents
             while ((bytes = fread(buffer, 1, BUFFER_SIZE, fp)) > 0) {
                 send(client_socket, buffer, bytes, 0);
@@ -130,7 +91,6 @@ void *handle_client(void *arg) {
             send(client_socket, "EOF", 3, 0);
             printf("Sent file %s to client.\n", filename);
         }
-
         else {
             char msg[BUFFER_SIZE];
             snprintf(msg, BUFFER_SIZE, "[%s]: I received: %s", user->username, buffer);
@@ -140,52 +100,4 @@ void *handle_client(void *arg) {
 
     close(client_socket);
     return NULL;
-}
-
-int main() {
-    int server_fd, *new_sock;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
-
-    load_users("users.txt");
-
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(server_fd, 5) < 0) {
-        perror("listen failed");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Server listening on port %d...\n", PORT);
-
-    while (1) {
-        int client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-        if (client_socket < 0) {
-            perror("accept failed");
-            continue;
-        }
-
-        new_sock = (int *)malloc(sizeof(int));
-        *new_sock = client_socket;
-
-        pthread_t tid;
-        pthread_create(&tid, NULL, handle_client, new_sock);
-        pthread_detach(tid);
-    }
-
-    close(server_fd);
-    return 0;
-}
+} 
