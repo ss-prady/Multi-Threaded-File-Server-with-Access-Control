@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+
 void *handle_client(void *arg) {
     int client_socket = *(int *)arg;
     free(arg);
@@ -14,20 +15,25 @@ void *handle_client(void *arg) {
     // --- Authentication ---
     char username[50], password[50];
     int bytes_received;
-
-    bytes_received = recv(client_socket, username, sizeof(username), 0);
+    
+    bytes_received = recv(client_socket, username, sizeof(username),0);
     if (bytes_received <= 0) {
         perror("Server: Failed to receive username");
         close(client_socket);
         return NULL;
     }
+    // sending acknowledgement 
+    char* ACK = "DATA_RECEIVED";
+    size_t bytes_sent = send(client_socket,ACK,strlen(ACK),0);
 
-    bytes_received = recv(client_socket, password, sizeof(password), 0);
+    bytes_received = recv(client_socket, password, sizeof(password),0);
     if (bytes_received <= 0) {
         perror("Server: Failed to receive password");
         close(client_socket);
         return NULL;
     }
+    // sending acknowledgement for password
+    bytes_sent = send(client_socket,ACK,strlen(ACK),0);
 
     User *user = authenticate(username, password);
     if (!user) {

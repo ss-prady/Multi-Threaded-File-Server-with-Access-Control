@@ -8,5 +8,5 @@
 
 // Thread function to handle client connections
 void *handle_client(void *arg);
-
+size_t recv_line(int sock, char *buffer, size_t max_len);
 #endif // CLIENT_HANDLER_H 

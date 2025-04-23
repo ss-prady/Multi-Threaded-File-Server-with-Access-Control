@@ -43,19 +43,27 @@ int authenticate(int sock) {
 
     // Send username and password separately
     send(sock, username, strlen(username), 0);
-    send(sock, password, strlen(password), 0);
-
-    // Wait for authentication response
+    size_t bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
     memset(buffer, 0, BUFFER_SIZE);
-    recv(sock, buffer, BUFFER_SIZE, 0);
+    if(bytes_received<0){
+        perror("failed to send the password");
+        return -1;
+    }
+    send(sock, password, strlen(password), 0);
+    bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
+    if(bytes_received<0){
+        perror("failed to send the password");
+        return -1;
+    }
+    memset(buffer, 0, BUFFER_SIZE);
+    bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
     printf("Server: %s\n", buffer);
 
-    if (strncmp(buffer, "AUTH_FAIL", 9) == 0) {
-        printf("Authentication failed. Closing connection.\n");
-        return 0;
+    if(strncmp(buffer,"AUTH_SUCCESS",9) == 0 ){
+        return 1;
     }
-    
-    return 1;
+    printf("Authentication failed. Closing connection.\n");
+    return 0;
 }
 
 void handle_upload(int sock, const char *filename) {
