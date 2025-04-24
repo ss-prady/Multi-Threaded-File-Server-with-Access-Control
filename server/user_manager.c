@@ -15,7 +15,7 @@ void print_usage(const char *program_name) {
 }
 
 int main(int argc, char *argv[]) {
-    const char *users_file = "users.txt";
+    const char *users_file = "users";
     
     // Initialize OpenSSL
     OpenSSL_add_all_algorithms();

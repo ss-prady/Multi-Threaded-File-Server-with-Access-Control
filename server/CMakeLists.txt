@@ -17,6 +17,7 @@ set(SERVER_SOURCES
     server.c
     user_auth.c
     client_handler.c
+    file_handler.c
 )
 
 # Create main server executable
@@ -38,9 +39,28 @@ target_link_libraries(user_manager PRIVATE
     OpenSSL::Crypto
 )
 
-# Copy users.txt to build directory
-configure_file(users.txt users.txt COPYONLY)
+# Copy users to build directory
+configure_file(users users COPYONLY)
+
+# Create files directory in build directory
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/files)
+
+# Get all files in the files directory
+file(GLOB FILES_DIR_CONTENTS "${CMAKE_CURRENT_SOURCE_DIR}/files/*")
+
+# Copy each file from the files directory to the build directory, excluding README.md
+foreach(FILE ${FILES_DIR_CONTENTS})
+    get_filename_component(FILENAME ${FILE} NAME)
+    if(NOT ${FILENAME} STREQUAL "README.md")
+        configure_file(${FILE} ${CMAKE_CURRENT_BINARY_DIR}/files/${FILENAME} COPYONLY)
+    endif()
+endforeach()
 
 # Installation rules
 install(TARGETS file_server user_manager DESTINATION bin)
-install(FILES users.txt DESTINATION share/${PROJECT_NAME}) 
+install(FILES users DESTINATION share/${PROJECT_NAME})
+
+# Install all files from the files directory, excluding README.md
+install(DIRECTORY files/ 
+        DESTINATION share/${PROJECT_NAME}/files
+        PATTERN "README.md" EXCLUDE) 

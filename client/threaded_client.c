@@ -40,6 +40,7 @@ int main() {
         // Upload command
         if (strncmp(buffer, "upload ", 7) == 0) {
             char *filename = buffer + 7;
+            printf("Uploading file: %s\n", filename);
             handle_upload(sock, filename);
         }
 

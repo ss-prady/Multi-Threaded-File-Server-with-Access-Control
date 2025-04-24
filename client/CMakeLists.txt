@@ -14,5 +14,17 @@ set(CLIENT_SOURCES
 # Create client executable
 add_executable(threaded_client ${CLIENT_SOURCES})
 
+# Find all .txt files in the current directory
+file(GLOB TXT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.txt")
+
+# Copy each .txt file to the build directory
+foreach(TXT_FILE ${TXT_FILES})
+    get_filename_component(FILENAME ${TXT_FILE} NAME)
+    configure_file(${TXT_FILE} ${CMAKE_CURRENT_BINARY_DIR}/${FILENAME} COPYONLY)
+endforeach()
+
 # Installation rules
-install(TARGETS threaded_client DESTINATION bin) 
+install(TARGETS threaded_client DESTINATION bin)
+
+# Install all .txt files
+install(FILES ${TXT_FILES} DESTINATION bin)

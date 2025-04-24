@@ -1,0 +1,9 @@
+This is a sample text file for testing the file server.
+It demonstrates the file handler's ability to manage multiple clients accessing files.
+
+You can:
+- Read this file simultaneously with multiple clients
+- Download this file
+- Modify this file (only one client at a time)
+
+The file_handler module ensures proper mutual exclusion using semaphores to manage access. 

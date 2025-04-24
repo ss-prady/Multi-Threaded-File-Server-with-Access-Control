@@ -1,9 +1,18 @@
 #include "server.h"
+#include "file_handler.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <signal.h>
+
+// Signal handler for graceful shutdown
+void handle_signal(int signal) {
+    printf("\nShutting down server...\n");
+    file_handler_cleanup();
+    exit(0);
+}
 
 int start_server() {
     int server_fd, *new_sock;
@@ -11,12 +20,23 @@ int start_server() {
     int addrlen = sizeof(address);
 
     // Load user database
-    load_users("users.txt");
+    load_users("users");
+    
+    // Initialize file handler
+    if (file_handler_init() != 0) {
+        fprintf(stderr, "Failed to initialize file handler\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    // Set up signal handlers for graceful shutdown
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
 
     // Create socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0); // TCP 
     if (server_fd == 0) {
         perror("socket failed");
+        file_handler_cleanup();
         exit(EXIT_FAILURE);
     }
 
@@ -28,12 +48,14 @@ int start_server() {
     // Bind socket to port
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed");
+        file_handler_cleanup();
         exit(EXIT_FAILURE);
     }
 
     // Start listening
     if (listen(server_fd, 5) < 0) {
         perror("listen failed");
+        file_handler_cleanup();
         exit(EXIT_FAILURE);
     }
 
@@ -56,6 +78,7 @@ int start_server() {
     }
 
     close(server_fd);
+    file_handler_cleanup();
     return 0;
 }
 
