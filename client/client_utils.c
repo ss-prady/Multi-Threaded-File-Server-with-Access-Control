@@ -1,4 +1,5 @@
 #include "client_utils.h"
+#include <netinet/tcp.h>
 
 int connect_to_server(const char *server_ip, int port) {
     int sock;
@@ -13,6 +14,14 @@ int connect_to_server(const char *server_ip, int port) {
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
+
+    // Disable Nagle's algorithm
+    int flag = 1;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) < 0) {
+        perror("Failed to disable Nagle's algorithm");
+        close(sock);
+        return -1;
+    }
 
     if (inet_pton(AF_INET, server_ip, &serv_addr.sin_addr) <= 0) {
         printf("Invalid address / Address not supported\n");
@@ -46,7 +55,7 @@ int authenticate(int sock) {
     size_t bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
     memset(buffer, 0, BUFFER_SIZE);
     if(bytes_received<0){
-        perror("failed to send the password");
+        perror("failed to send the username");
         return -1;
     }
     send(sock, password, strlen(password)+1, 0);
@@ -79,7 +88,7 @@ void handle_upload(int sock, const char *filename) {
     }
 
     // Send command
-    send(sock, command, strlen(command), 0);
+    send(sock, command, strlen(command)+1, 0);
 
     // Wait for READY or error
     memset(buffer, 0, BUFFER_SIZE);
@@ -99,7 +108,7 @@ void handle_upload(int sock, const char *filename) {
     fclose(fp);
 
     // Send EOF
-    send(sock, "EOF", 3, 0);
+    send(sock, "", 1, 0);
 
     // Wait for confirmation
     memset(buffer, 0, BUFFER_SIZE);
@@ -114,7 +123,7 @@ void handle_download(int sock, const char *filename) {
     strcat(command, filename);
     
     // Send command to server
-    send(sock, command, strlen(command), 0);
+    send(sock, command, strlen(command)+1, 0);
 
     // Wait for server to respond
     memset(buffer, 0, BUFFER_SIZE);
@@ -134,9 +143,11 @@ void handle_download(int sock, const char *filename) {
     strcpy(local_filename, filename);
     
     FILE *fp = fopen(local_filename, "wb");
+    printf("Trying to open file: %s\n", local_filename);
     if (!fp) {
         // Try with modified permissions
         sprintf(local_filename, "downloaded_%s", filename);
+        printf("Tried with modified permissions\n");
         fp = fopen(local_filename, "wb");
         
         if (!fp) {
@@ -145,7 +156,7 @@ void handle_download(int sock, const char *filename) {
             while (1) {
                 memset(buffer, 0, BUFFER_SIZE);
                 int bytes = recv(sock, buffer, BUFFER_SIZE, 0);
-                if (bytes <= 0 || (bytes == 3 && strncmp(buffer, "EOF", 3) == 0)) {
+                if(buffer[bytes-1] == '\0'){
                     break;
                 }
             }
@@ -157,15 +168,14 @@ void handle_download(int sock, const char *filename) {
     while (1) {
         memset(buffer, 0, BUFFER_SIZE);
         int bytes = recv(sock, buffer, BUFFER_SIZE, 0);
-        if (bytes <= 0) break;
-    
-        // Handle case where "EOF" may be part of the buffer
-        if (bytes == 3 && strncmp(buffer, "EOF", 3) == 0) {
-            break;  // Stop receiving when EOF is detected
-        }
-    
+        
         // Write file data to disk
-        fwrite(buffer, 1, bytes, fp);
+        fwrite(buffer, 1, bytes - (buffer[bytes - 1] == '\0'), fp);
+        
+        if(buffer[bytes-1] == '\0'){
+            break;
+        }
+
     }
 
     fclose(fp);

@@ -45,13 +45,13 @@ void *handle_client(void *arg) {
     User *user = authenticate(username, password);
     if (!user) {
         char *fail_msg = "AUTH_FAIL";
-        send(client_socket, fail_msg, strlen(fail_msg), 0);
+        send(client_socket, fail_msg, strlen(fail_msg) + 1, 0);
         close(client_socket);
         return NULL;
     }
 
     char *success_msg = "AUTH_SUCCESS";
-    send(client_socket, success_msg, strlen(success_msg), 0);
+    send(client_socket, success_msg, strlen(success_msg) + 1, 0);
 
     // --- Command loop ---
     while (1) {
@@ -72,16 +72,18 @@ void *handle_client(void *arg) {
             
             // Check if file already exists (no need to lock for this)
             if (file_exists(filename)) {
-                send(client_socket, "ERROR: File with the same name already exists", 44, 0);
+                send(client_socket, "ERROR: File with the same name already exists", 46, 0);
                 continue;
             }
             
             // Get full path to file
             char *filepath = get_file_path(filename);
             if (!filepath) {
-                send(client_socket, "ERROR: Internal server error", 28, 0);
+                send(client_socket, "ERROR: Internal server error", 29, 0);
                 continue;
             }
+            
+            printf("%s", filepath);
             
             // Lock directory for file creation only
             lock_directory_for_upload();
@@ -90,7 +92,7 @@ void *handle_client(void *arg) {
             if (file_exists(filename)) {
                 unlock_directory_for_upload();
                 free(filepath);
-                send(client_socket, "ERROR: File with the same name already exists", 44, 0);
+                send(client_socket, "ERROR: File with the same name already exists", 46, 0);
                 continue;
             }
             
@@ -99,11 +101,12 @@ void *handle_client(void *arg) {
             // We can unlock the directory as soon as the file is created
             unlock_directory_for_upload();
             
+
             free(filepath);
             
             if (!fp) {
                 perror("Server: Error creating file");
-                send(client_socket, "ERROR: Could not create file", 28, 0);
+                send(client_socket, "ERROR: Could not create file", 29, 0);
                 continue;
             }
 
@@ -113,13 +116,14 @@ void *handle_client(void *arg) {
             while (1) {
                 memset(buffer, 0, BUFFER_SIZE);
                 int bytes_read = recv(client_socket, buffer, BUFFER_SIZE, 0);
-                if (bytes_read <= 0 || strcmp(buffer, "EOF") == 0) break;
-                fwrite(buffer, sizeof(char), bytes_read, fp);
+                fwrite(buffer, sizeof(char), bytes_read - (buffer[bytes_read - 1] == 0), fp);
+                // if (bytes_read <= 0 || strcmp(buffer, "EOF") == 0) break;
+                if(buffer[bytes_read - 1] == '\0') break;
             }
 
             fclose(fp);
             printf("Upload complete.\n");
-            send(client_socket, "Upload successful", 17, 0);
+            send(client_socket, "Upload successful", 18, 0);
 
         } else if (strncmp(buffer, "read ", 5) == 0) {
             if (strcmp(user->role, "read") != 0 && strcmp(user->role, "write") != 0) {
@@ -165,10 +169,9 @@ void *handle_client(void *arg) {
             while ((bytes = fread(buffer, 1, BUFFER_SIZE, fp)) > 0) {
                 send(client_socket, buffer, bytes, 0);
             }
-        
             fclose(fp);
             release_file_access(filename, READ_MODE);
-        
+            
             // Send EOF to signal end
             send(client_socket, "EOF", 3, 0);
             printf("Sent file contents of %s to client for reading.\n", filename);
@@ -179,20 +182,24 @@ void *handle_client(void *arg) {
                 continue;
             }
 
-            char *filename = buffer + 9;
-            
+            // char *filename = buffer + 9;
+
+            char filename[strlen(buffer) - 8];
+            strcpy(filename, buffer + 9);
+            filename[strlen(buffer) - 8] = '\0';
+
             // Check if file exists
             if (!file_exists(filename)) {
                 send(client_socket, "ERROR: File not found", 22, 0);
                 continue;
             }
-            
+
             // Request download access to the file
             if (request_file_access(filename, DOWNLOAD_MODE) != 0) {
                 send(client_socket, "ERROR: Cannot access file for downloading", 41, 0);
                 continue;
             }
-            
+
             // Get full path to file
             char *filepath = get_file_path(filename);
             if (!filepath) {
@@ -200,20 +207,18 @@ void *handle_client(void *arg) {
                 send(client_socket, "ERROR: Internal server error", 28, 0);
                 continue;
             }
-            
+
             FILE *fp = fopen(filepath, "rb");
             free(filepath);
-            
             if (!fp) {
                 perror("Server: Error opening file");
                 release_file_access(filename, DOWNLOAD_MODE);
                 send(client_socket, "ERROR: Cannot open file", 24, 0);
                 continue;
             }
-
+            
             send(client_socket, "READY", 5, 0);
-            sleep(1);  // Optional delay to avoid overlapping with file data
-
+            
             // Send the file contents
             while ((bytes = fread(buffer, 1, BUFFER_SIZE, fp)) > 0) {
                 send(client_socket, buffer, bytes, 0);
@@ -221,9 +226,9 @@ void *handle_client(void *arg) {
         
             fclose(fp);
             release_file_access(filename, DOWNLOAD_MODE);
-        
+            buffer[0] = '\0';
             // Send EOF to signal end
-            send(client_socket, "EOF", 3, 0);
+            send(client_socket, buffer, 1, 0);
             printf("Sent file %s to client for download.\n", filename);
         } else if (strncmp(buffer, "modify ", 7) == 0) {
             if (strcmp(user->role, "write") != 0) {
