@@ -20,14 +20,25 @@ int main() {
     }
 
     // Authenticate
-    if (!authenticate(sock)) {
-        close(sock);
-        return 0;
+    while(1) {
+        printf("Enter command (login): ");
+        fgets(buffer, BUFFER_SIZE, stdin);
+        buffer[strcspn(buffer, "\n")] = '\0';
+        if (strcmp(buffer, "login") == 0) {
+            if(!authenticate(sock)) {
+                close(sock);
+                return 0;
+            }
+            break;
+        }
+        else {
+            printf("Unknown command. Please login first using the 'login' command.\n");
+        }
     }
 
     // --- Main Loop ---
     while (1) {
-        printf("\nEnter command (upload <file> / download <file> / modify <file> / exit): ");
+        printf("\nEnter command (upload <file> / download <file> / modify <file> / list /exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = '\0';
 
@@ -53,6 +64,17 @@ int main() {
         else if(strncmp(buffer, "modify ", 7) == 0) {
             char *filename = buffer + 7;
             handle_modify(sock, filename);
+        }
+
+        else if (strcmp(buffer, "list") == 0) {
+          send(sock, "list", strlen("list"), 0);
+          int bytes_read;
+          printf("Available files:\n");
+          while ((bytes_read = recv(sock, buffer, BUFFER_SIZE-1, 0)) > 0) {
+              buffer[bytes_read] = '\0';
+              printf("%s\n", buffer);
+              if(strstr(buffer, "__END__") != NULL) break;
+          }   
         }
 
         // Unknown command
