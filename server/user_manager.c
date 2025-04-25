@@ -11,7 +11,7 @@ void print_usage(const char *program_name) {
     printf("  -l                                 List all users\n");
     printf("  -d <username>                      Delete a user\n");
     printf("  -h                                 Show this help message\n");
-    printf("\nRoles must be either 'read' or 'write'\n");
+    printf("\nRoles must be either 'read', 'write' or 'modify'\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
         const char *role = argv[4];
         
         // Validate role
-        if (strcmp(role, "read") != 0 && strcmp(role, "write") != 0) {
-            printf("Error: Role must be either 'read' or 'write'\n");
+        if (strcmp(role, "read") != 0 && strcmp(role, "write") != 0 && strcmp(role, "modify") != 0) {
+            printf("Error: Role must be either 'read', 'write' or 'modify'\n");
             return 1;
         }
         

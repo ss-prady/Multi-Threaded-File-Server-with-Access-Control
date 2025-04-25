@@ -181,3 +181,58 @@ void handle_download(int sock, const char *filename) {
     fclose(fp);
     printf("Download complete. Saved as %s\n", local_filename);
 } 
+
+void handle_modify(int sock, const char *filename) {
+    char buffer[BUFFER_SIZE];
+    char cmd[BUFFER_SIZE];
+    // 1) ask server to enter modify mode
+    snprintf(cmd, sizeof(cmd), "modify %s", filename);
+    send(sock, cmd, strlen(cmd)+1, 0);
+
+    // 2) wait for READY
+    recv(sock, buffer, sizeof(buffer), 0);
+    if (strncmp(buffer, "READY", 5) != 0) {
+        printf("Server: %s\n", buffer);
+        return;
+    }
+
+    // 3) receive file into a temp file
+    char tmpname[] = "/tmp/editXXXXXX";
+    int fd = mkstemp(tmpname);
+    if (fd < 0) { perror("mkstemp"); return; }
+    FILE *fp = fdopen(fd, "wb+");
+    if (!fp) { perror("fdopen"); close(fd); return; }
+
+    while (1) {
+        int bytes = recv(sock, buffer, sizeof(buffer), 0);
+        // if (bytes <= 0) { perror("recv"); fclose(fp); return; }
+        // detect EOF marker
+        // if (bytes == 3 && strncmp(buffer, "EOF", 3) == 0) break;
+        fwrite(buffer, 1, bytes - (buffer[bytes - 1] == 0), fp);
+        if(buffer[bytes - 1] == 0) break;
+    }
+    fflush(fp);
+
+    // 4) launch editor
+    const char *editor = getenv("EDITOR");
+    if (!editor) editor = "nano";
+    char editcmd[512];
+    snprintf(editcmd, sizeof(editcmd), "%s %s", editor, tmpname);
+    system(editcmd);
+
+    // 5) rewind and send back modifications
+    fseek(fp, 0, SEEK_SET);
+    while (!feof(fp)) {
+        size_t n = fread(buffer, 1, sizeof(buffer), fp);
+        if (n > 0) send(sock, buffer, n, 0);
+    }
+    send(sock, "", 1, 0);
+
+    // 6) wait for server confirmation
+    memset(buffer, 0, sizeof(buffer));
+    recv(sock, buffer, sizeof(buffer), 0);
+    printf("Server: %s\n", buffer);
+
+    fclose(fp);
+    unlink(tmpname);
+}

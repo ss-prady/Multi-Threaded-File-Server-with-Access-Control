@@ -27,7 +27,7 @@ int main() {
 
     // --- Main Loop ---
     while (1) {
-        printf("\nEnter command (upload <file> / download <file> / exit): ");
+        printf("\nEnter command (upload <file> / download <file> / modify <file> / exit): ");
         fgets(buffer, BUFFER_SIZE, stdin);
         buffer[strcspn(buffer, "\n")] = '\0';
 
@@ -48,6 +48,11 @@ int main() {
         else if (strncmp(buffer, "download ", 9) == 0) {
             char *filename = buffer + 9;
             handle_download(sock, filename);
+        }
+
+        else if(strncmp(buffer, "modify ", 7) == 0) {
+            char *filename = buffer + 7;
+            handle_modify(sock, filename);
         }
 
         // Unknown command

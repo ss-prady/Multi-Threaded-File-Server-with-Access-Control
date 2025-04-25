@@ -63,12 +63,15 @@ void *handle_client(void *arg) {
         printf("[%s] Command: %s\n", user->username, buffer);
 
         if (strncmp(buffer, "upload ", 7) == 0) {
-            if (strcmp(user->role, "write") != 0) {
+            if (strcmp(user->role, "modify") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
                 continue;
             }
 
-            char *filename = buffer + 7;
+            // char *filename = buffer + 7;
+            char filename[strlen(buffer) - 6];
+            strcpy(filename, buffer + 7);
+            filename[strlen(buffer) - 6] = '\0';
             
             // Check if file already exists (no need to lock for this)
             if (file_exists(filename)) {
@@ -125,57 +128,6 @@ void *handle_client(void *arg) {
             printf("Upload complete.\n");
             send(client_socket, "Upload successful", 18, 0);
 
-        } else if (strncmp(buffer, "read ", 5) == 0) {
-            if (strcmp(user->role, "read") != 0 && strcmp(user->role, "write") != 0) {
-                send(client_socket, "Permission denied", 18, 0);
-                continue;
-            }
-
-            char *filename = buffer + 5;
-            
-            // Check if file exists
-            if (!file_exists(filename)) {
-                send(client_socket, "ERROR: File not found", 22, 0);
-                continue;
-            }
-            
-            // Request read access to the file
-            if (request_file_access(filename, READ_MODE) != 0) {
-                send(client_socket, "ERROR: Cannot access file for reading", 37, 0);
-                continue;
-            }
-            
-            // Get full path to file
-            char *filepath = get_file_path(filename);
-            if (!filepath) {
-                release_file_access(filename, READ_MODE);
-                send(client_socket, "ERROR: Internal server error", 28, 0);
-                continue;
-            }
-            
-            FILE *fp = fopen(filepath, "rb");
-            free(filepath);
-            
-            if (!fp) {
-                perror("Server: Error opening file");
-                release_file_access(filename, READ_MODE);
-                send(client_socket, "ERROR: Cannot open file", 24, 0);
-                continue;
-            }
-
-            send(client_socket, "READY", 5, 0);
-            
-            // Send the file contents
-            while ((bytes = fread(buffer, 1, BUFFER_SIZE, fp)) > 0) {
-                send(client_socket, buffer, bytes, 0);
-            }
-            fclose(fp);
-            release_file_access(filename, READ_MODE);
-            
-            // Send EOF to signal end
-            send(client_socket, "EOF", 3, 0);
-            printf("Sent file contents of %s to client for reading.\n", filename);
-
         } else if (strncmp(buffer, "download ", 9) == 0) {
             if (strcmp(user->role, "read") != 0 && strcmp(user->role, "write") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
@@ -231,12 +183,15 @@ void *handle_client(void *arg) {
             send(client_socket, buffer, 1, 0);
             printf("Sent file %s to client for download.\n", filename);
         } else if (strncmp(buffer, "modify ", 7) == 0) {
-            if (strcmp(user->role, "write") != 0) {
+            if (strcmp(user->role, "modify") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
                 continue;
             }
             
-            char *filename = buffer + 7;
+            // char *filename = buffer + 7;
+            char filename[strlen(buffer) - 6];
+            strcpy(filename, buffer + 7);
+            filename[strlen(buffer) - 6] = '\0';
             
             // Check if file exists
             if (!file_exists(filename)) {
@@ -246,7 +201,7 @@ void *handle_client(void *arg) {
             
             // Request write access to the file
             if (request_file_access(filename, WRITE_MODE) != 0) {
-                send(client_socket, "ERROR: Cannot access file for modification", 42, 0);
+                send(client_socket, "ERROR: Cannot access file for modification", 43, 0);
                 continue;
             }
             
@@ -276,7 +231,7 @@ void *handle_client(void *arg) {
             }
             
             // Send EOF to signal end of file content
-            send(client_socket, "EOF", 3, 0);
+            send(client_socket, "", 1, 0);
             fclose(fp);
             
             // Wait for modified file
@@ -294,8 +249,9 @@ void *handle_client(void *arg) {
             while (1) {
                 memset(buffer, 0, BUFFER_SIZE);
                 int bytes_read = recv(client_socket, buffer, BUFFER_SIZE, 0);
-                if (bytes_read <= 0 || strcmp(buffer, "EOF") == 0) break;
-                fwrite(buffer, sizeof(char), bytes_read, fp);
+                // if (bytes_read <= 0 || strcmp(buffer, "EOF") == 0) break;
+                fwrite(buffer, sizeof(char), bytes_read - (buffer[bytes_read - 1] == 0), fp);
+                if(buffer[bytes_read - 1] == '\0') break;
             }
             
             fclose(fp);
@@ -306,7 +262,7 @@ void *handle_client(void *arg) {
         else {
             char msg[BUFFER_SIZE];
             snprintf(msg, BUFFER_SIZE, "[%s]: I received: %s", user->username, buffer);
-            send(client_socket, msg, strlen(msg), 0);
+            send(client_socket, msg, strlen(msg) + 1, 0);
         }
     }
 
