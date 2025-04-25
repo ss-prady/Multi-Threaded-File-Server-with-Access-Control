@@ -63,7 +63,7 @@ void *handle_client(void *arg) {
         printf("[%s] Command: %s\n", user->username, buffer);
 
         if (strncmp(buffer, "upload ", 7) == 0) {
-            if (strcmp(user->role, "modify") != 0) {
+            if (strcmp(user->role, "modify") != 0 && strcmp(user->role, "write") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
                 continue;
             }
@@ -129,7 +129,7 @@ void *handle_client(void *arg) {
             send(client_socket, "Upload successful", 18, 0);
 
         } else if (strncmp(buffer, "download ", 9) == 0) {
-            if (strcmp(user->role, "read") != 0 && strcmp(user->role, "write") != 0) {
+            if (strcmp(user->role, "read") != 0 && strcmp(user->role, "write") != 0 && strcmp(user->role, "modify") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
                 continue;
             }
