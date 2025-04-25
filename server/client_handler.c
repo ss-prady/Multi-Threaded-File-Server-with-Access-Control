@@ -198,7 +198,6 @@ void *handle_client(void *arg) {
                 send(client_socket, "ERROR: File not found", 22, 0);
                 continue;
             }
-            
             // Request write access to the file
             if (request_file_access(filename, WRITE_MODE) != 0) {
                 send(client_socket, "ERROR: Cannot access file for modification", 43, 0);

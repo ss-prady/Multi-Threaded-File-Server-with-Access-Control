@@ -190,6 +190,7 @@ void handle_modify(int sock, const char *filename) {
     send(sock, cmd, strlen(cmd)+1, 0);
 
     // 2) wait for READY
+    printf("Waiting for server to respond...\n");
     recv(sock, buffer, sizeof(buffer), 0);
     if (strncmp(buffer, "READY", 5) != 0) {
         printf("Server: %s\n", buffer);
@@ -208,8 +209,8 @@ void handle_modify(int sock, const char *filename) {
         // if (bytes <= 0) { perror("recv"); fclose(fp); return; }
         // detect EOF marker
         // if (bytes == 3 && strncmp(buffer, "EOF", 3) == 0) break;
-        fwrite(buffer, 1, bytes - (buffer[bytes - 1] == 0), fp);
-        if(buffer[bytes - 1] == 0) break;
+        fwrite(buffer, 1, bytes - (buffer[bytes - 1] == '\0'), fp);
+        if(buffer[bytes - 1] == '\0') break;
     }
     fflush(fp);
 
