@@ -23,6 +23,9 @@ void *handle_client(void *arg) {
         close(client_socket);
         return NULL;
     }
+
+    printf("%s\n", username);
+
     // sending acknowledgement 
     char* ACK = "DATA_RECEIVED";
     size_t bytes_sent = send(client_socket,ACK,strlen(ACK),0);
@@ -33,6 +36,9 @@ void *handle_client(void *arg) {
         close(client_socket);
         return NULL;
     }
+
+    printf("%s\n", password);
+
     // sending acknowledgement for password
     bytes_sent = send(client_socket,ACK,strlen(ACK),0);
 

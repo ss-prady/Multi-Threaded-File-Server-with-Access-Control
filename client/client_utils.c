@@ -42,14 +42,14 @@ int authenticate(int sock) {
     password[strcspn(password, "\n")] = '\0';
 
     // Send username and password separately
-    send(sock, username, strlen(username), 0);
+    send(sock, username, strlen(username)+1, 0);
     size_t bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
     memset(buffer, 0, BUFFER_SIZE);
     if(bytes_received<0){
         perror("failed to send the password");
         return -1;
     }
-    send(sock, password, strlen(password), 0);
+    send(sock, password, strlen(password)+1, 0);
     bytes_received = recv(sock,buffer,BUFFER_SIZE,0);
     if(bytes_received<0){
         perror("failed to send the password");
