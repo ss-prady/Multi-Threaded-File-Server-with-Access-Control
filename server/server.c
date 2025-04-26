@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <ifaddrs.h>  
 
 // Signal handler for graceful shutdown
 void handle_signal(int signal) {
@@ -59,7 +60,30 @@ int start_server() {
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d...\n", PORT);
+    //Print all available IP addresses
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Server listening on:\n");
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL)
+            continue;
+        if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4 addresses
+            struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
+            char *ip = inet_ntoa(sa->sin_addr);
+
+            // Avoid printing "127.0.0.1" multiple times unless you want localhost
+            if (strcmp(ip, "127.0.0.1") != 0) {
+                printf("  %s:%d\n", ip, PORT);
+            }
+        }
+    }
+    freeifaddrs(ifaddr);
+
+    printf("  127.0.0.1:%d\n", PORT); // Also show localhost explicitly
 
     // Accept client connections in a loop
     while (1) {

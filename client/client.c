@@ -35,26 +35,18 @@ int main() {
     print_welcome();
 
     // Connect to server
-    sock = connect_to_server("10.81.106.164", PORT);
+    sock = connect_to_server("127.0.0.1", PORT);
     if (sock < 0) {
         return -1;
     }
 
     // Authenticate
     while(1) {
-        printf("\n> Enter command (login): ");
-        fgets(buffer, BUFFER_SIZE, stdin);
-        buffer[strcspn(buffer, "\n")] = '\0';
-        if (strcmp(buffer, "login") == 0) {
-            if(!authenticate(sock)) {
-                close(sock);
-                return 0;
-            }
-            break;
+        if(!authenticate(sock)) {
+            close(sock);
+            return 0;
         }
-        else {
-            printf("Unknown command. Please login first using the 'login' command.\n");
-        }
+        else break;
     }
 
     printf("\nLogin successful. Type 'help' to see available commands.\n");

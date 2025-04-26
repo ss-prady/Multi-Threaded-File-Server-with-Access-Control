@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Add source files for client
 set(CLIENT_SOURCES
-    main.c                # Main client logic
+    client.c                # Main client logic
     client_utils.c        # Helper functions
 )
 

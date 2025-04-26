@@ -1,14 +1,19 @@
-#!/bin/bash
+clear
+echo "=============================================="
+echo "        FileClient Setup & Launch Script      "
+echo "=============================================="
 
-echo "======================================="
-echo "             Starting Client"
-echo "======================================="
-cd build/client
+echo "[*] Creating build directory..."
+mkdir -p build
+cd build
+
+echo "[*] Running CMake..."
+cmake .. || { echo "[-] CMake configuration failed!"; exit 1; }
+
+echo "[*] Building project..."
+make || { echo "[-] Build failed!"; exit 1; }
+
+echo "----------------------------------------------"
+echo "[*] Launching File Client..."
+cd client 
 ./file_client
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to start the client."
-    exit 1
-fi
-
-cd ..
