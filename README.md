@@ -1,7 +1,7 @@
 # Multi-Threaded-File-Server-with-Access-Control
 A project in Operating Systems
 
-
+before starting client, update the IP address of server in main.c
 ## To start client: 
 
 chmod +x run_client.sh<br>
