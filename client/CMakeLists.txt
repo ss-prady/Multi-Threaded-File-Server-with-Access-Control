@@ -7,12 +7,12 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Add source files for client
 set(CLIENT_SOURCES
-    threaded_client.c
-    client_utils.c
+    main.c                # Main client logic
+    client_utils.c        # Helper functions
 )
 
-# Create client executable
-add_executable(threaded_client ${CLIENT_SOURCES})
+# Create client executable with new name
+add_executable(file_client ${CLIENT_SOURCES})
 
 # Find all .txt files in the current directory
 file(GLOB TXT_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.txt")
@@ -24,7 +24,7 @@ foreach(TXT_FILE ${TXT_FILES})
 endforeach()
 
 # Installation rules
-install(TARGETS threaded_client DESTINATION bin)
+install(TARGETS file_client DESTINATION bin)
 
 # Install all .txt files
 install(FILES ${TXT_FILES} DESTINATION bin)
