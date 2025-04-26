@@ -149,7 +149,7 @@ void *handle_client(void *arg) {
             }
 
             // Request download access to the file
-            if (request_file_access(filename, DOWNLOAD_MODE) != 0) {
+            if (request_file_access(filename, READ_MODE) != 0) {
                 send(client_socket, "ERROR: Cannot access file for downloading", 41, 0);
                 continue;
             }
@@ -157,7 +157,7 @@ void *handle_client(void *arg) {
             // Get full path to file
             char *filepath = get_file_path(filename);
             if (!filepath) {
-                release_file_access(filename, DOWNLOAD_MODE);
+                release_file_access(filename, READ_MODE);
                 send(client_socket, "ERROR: Internal server error", 28, 0);
                 continue;
             }
@@ -166,7 +166,7 @@ void *handle_client(void *arg) {
             free(filepath);
             if (!fp) {
                 perror("Server: Error opening file");
-                release_file_access(filename, DOWNLOAD_MODE);
+                release_file_access(filename, READ_MODE);
                 send(client_socket, "ERROR: Cannot open file", 24, 0);
                 continue;
             }
@@ -179,7 +179,7 @@ void *handle_client(void *arg) {
             }
         
             fclose(fp);
-            release_file_access(filename, DOWNLOAD_MODE);
+            release_file_access(filename, READ_MODE);
             buffer[0] = '\0';
             // Send EOF to signal end
             send(client_socket, buffer, 1, 0);

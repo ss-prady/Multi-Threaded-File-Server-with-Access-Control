@@ -35,7 +35,7 @@ int main() {
     print_welcome();
 
     // Connect to server
-    sock = connect_to_server("10.81.106.67", PORT);
+    sock = connect_to_server("10.81.106.164", PORT);
     if (sock < 0) {
         return -1;
     }

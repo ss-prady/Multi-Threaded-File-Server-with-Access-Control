@@ -19,8 +19,7 @@
 typedef enum
 {
     READ_MODE,
-    WRITE_MODE,
-    DOWNLOAD_MODE
+    WRITE_MODE
 } access_mode_t;
 
 // Initialize the file handler system

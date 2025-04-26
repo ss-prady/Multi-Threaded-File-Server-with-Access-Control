@@ -8,7 +8,6 @@ typedef struct {
     sem_t write_sem;        // Binary semaphore for writers
     pthread_mutex_t mutex;  // Mutex for updating reader/writer counts
     int reader_count;       // Number of active readers
-    int downloader_count;   // Number of active downloaders
     int writer_active;      // Whether a writer is active
     bool initialized;       // Whether this file entry is initialized
 } file_entry_t;
@@ -45,7 +44,6 @@ static file_entry_t* get_file_entry(const char* filename) {
             pthread_mutex_init(&file_entries[i].mutex, NULL);
             
             file_entries[i].reader_count = 0;
-            file_entries[i].downloader_count = 0;
             file_entries[i].writer_active = 0;
             file_entries[i].initialized = true;
             
@@ -92,7 +90,6 @@ int file_handler_init(void) {
                 pthread_mutex_init(&file_entries[index].mutex, NULL);
 
                 file_entries[index].reader_count = 0;
-                file_entries[index].downloader_count = 0;
                 file_entries[index].writer_active = 0;
                 file_entries[index].initialized = true;
 
@@ -147,35 +144,12 @@ int request_file_access(const char *filename, access_mode_t mode) {
             
             // Increment reader count
             entry->reader_count++;
-            
+            pthread_mutex_unlock(&entry->mutex);
             // If this is the first reader, lock the write semaphore
-            if (entry->reader_count == 1 && entry->downloader_count == 0) {
+            if (entry->reader_count == 1) {
                 sem_wait(&entry->write_sem);
             }
             
-            pthread_mutex_unlock(&entry->mutex);
-            return 0;
-            
-        case DOWNLOAD_MODE:
-            // Get download access (similar to read access)
-            pthread_mutex_lock(&entry->mutex);
-            
-            // If a writer is waiting or active, wait for read semaphore
-            if (entry->writer_active) {
-                pthread_mutex_unlock(&entry->mutex);
-                sem_wait(&entry->read_sem);
-                pthread_mutex_lock(&entry->mutex);
-            }
-            
-            // Increment downloader count
-            entry->downloader_count++;
-            
-            // If this is the first concurrent reader/downloader, lock the write semaphore
-            if (entry->reader_count == 0 && entry->downloader_count == 1) {
-                sem_wait(&entry->write_sem);
-            }
-            
-            pthread_mutex_unlock(&entry->mutex);
             return 0;
             
         case WRITE_MODE:
@@ -183,8 +157,8 @@ int request_file_access(const char *filename, access_mode_t mode) {
             pthread_mutex_lock(&entry->mutex);
             entry->writer_active = 1;
             pthread_mutex_unlock(&entry->mutex);
-            
             // Wait for exclusive access (no readers, no writers, no downloaders)
+            printf("Waiting for write access to %s...\n", filename);
             sem_wait(&entry->write_sem);
             return 0;
     }
@@ -205,27 +179,12 @@ void release_file_access(const char *filename, access_mode_t mode) {
             
             // Decrement reader count
             entry->reader_count--;
-            
+            pthread_mutex_unlock(&entry->mutex);
             // If there are no more readers or downloaders, release the write semaphore
-            if (entry->reader_count == 0 && entry->downloader_count == 0) {
+            if (entry->reader_count == 0) {
                 sem_post(&entry->write_sem);
             }
             
-            pthread_mutex_unlock(&entry->mutex);
-            break;
-            
-        case DOWNLOAD_MODE:
-            pthread_mutex_lock(&entry->mutex);
-            
-            // Decrement downloader count
-            entry->downloader_count--;
-            
-            // If there are no more readers or downloaders, release the write semaphore
-            if (entry->reader_count == 0 && entry->downloader_count == 0) {
-                sem_post(&entry->write_sem);
-            }
-            
-            pthread_mutex_unlock(&entry->mutex);
             break;
             
         case WRITE_MODE:
@@ -236,9 +195,6 @@ void release_file_access(const char *filename, access_mode_t mode) {
             
             // Signal that writing is done
             sem_post(&entry->write_sem);
-            
-            // Allow any waiting readers/downloaders to proceed
-            sem_post(&entry->read_sem);
             break;
     }
 }
