@@ -20,5 +20,6 @@ int authenticate(int sock);
 void handle_upload(int sock, const char *filename);
 void handle_download(int sock, const char *filename);
 void handle_modify(int sock, const char *filename);
+void handle_list(int sock);
 
 #endif // CLIENT_UTILS_H

@@ -237,3 +237,24 @@ void handle_modify(int sock, const char *filename) {
     fclose(fp);
     unlink(tmpname);
 }
+void handle_list(int sock) {
+    char buffer[BUFFER_SIZE];
+    send(sock, "list", strlen("list") + 1, 0);
+
+    printf("Available files:\n");
+
+    while (1) {
+        int bytes_read = recv(sock, buffer, BUFFER_SIZE, 0);
+        if (bytes_read <= 0) {
+            perror("recv failed");
+            break;
+        }
+
+        buffer[bytes_read] = '\0';  // Ensure null termination
+        printf("%.*s", bytes_read - (buffer[bytes_read - 1] == '\0'), buffer);
+
+        if (buffer[bytes_read - 1] == '\0') {
+            break;
+        }
+    }
+}

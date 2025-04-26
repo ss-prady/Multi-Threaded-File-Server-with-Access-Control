@@ -264,26 +264,29 @@ void *handle_client(void *arg) {
             DIR *dir;
             struct dirent *entry;
             char filepath[BUFFER_SIZE];
-
+        
             dir = opendir("./files");
             if (dir == NULL) {
                 perror("Failed to open directory");
                 send(client_socket, "ERROR: Internal server error", 28, 0);
                 continue;
             }
-
+        
             while ((entry = readdir(dir)) != NULL) {
                 if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
                     continue;
                 }
-
+        
                 snprintf(filepath, sizeof(filepath), "%s\n", entry->d_name);
                 send(client_socket, filepath, strlen(filepath), 0);
             }
-            send(client_socket, "__END__", strlen("__END__"), 0);
-
+        
+            // Send null byte to signal EOF
+            send(client_socket, "", 1, 0); // <-- this is important
+        
             closedir(dir);
         }
+        
         else {
             char msg[BUFFER_SIZE];
             snprintf(msg, BUFFER_SIZE, "[%s]: I received: %s", user->username, buffer);
