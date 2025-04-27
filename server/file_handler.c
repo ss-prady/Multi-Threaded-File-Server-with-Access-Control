@@ -1,5 +1,6 @@
 #include "file_handler.h"
 #include <dirent.h> // For directory operations
+#include "logger.h"
 
 // Structure to track file access statistics and semaphores
 typedef struct {

@@ -18,6 +18,7 @@ set(SERVER_SOURCES
     user_auth.c
     client_handler.c
     file_handler.c
+    logger.c  # Add logger.c to the sources
 )
 
 # Create main server executable
@@ -63,4 +64,4 @@ install(FILES users DESTINATION share/${PROJECT_NAME})
 # Install all files from the files directory, excluding README.md
 install(DIRECTORY files/ 
         DESTINATION share/${PROJECT_NAME}/files
-        PATTERN "README.md" EXCLUDE) 
+        PATTERN "README.md" EXCLUDE)

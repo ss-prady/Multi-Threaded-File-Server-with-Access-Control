@@ -6,12 +6,15 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <dirent.h>     
-#include <sys/types.h>  
+#include <sys/types.h> 
+#include "logger.h" 
 
 
 void *handle_client(void *arg) {
     int client_socket = *(int *)arg;
     free(arg);
+    log_message(LOG_INFO, "New client thread started with socket %d", client_socket);
+
 
     char buffer[BUFFER_SIZE] = {0};
 
@@ -27,6 +30,7 @@ void *handle_client(void *arg) {
     }
 
     printf("%s\n", username);
+    log_message(LOG_INFO, "Received username: %s", username);
 
     // sending acknowledgement 
     char* ACK = "DATA_RECEIVED";
@@ -40,6 +44,7 @@ void *handle_client(void *arg) {
     }
 
     printf("%s\n", password);
+    log_message(LOG_INFO, "Received password for username: %s", username);
 
     // sending acknowledgement for password
     bytes_sent = send(client_socket,ACK,strlen(ACK),0);
@@ -48,12 +53,14 @@ void *handle_client(void *arg) {
     if (!user) {
         char *fail_msg = "AUTH_FAIL";
         send(client_socket, fail_msg, strlen(fail_msg) + 1, 0);
+        log_message(LOG_ERROR, "Authentication FAILED for username: %s", username);
         close(client_socket);
         return NULL;
     }
 
     char *success_msg = "AUTH_SUCCESS";
     send(client_socket, success_msg, strlen(success_msg) + 1, 0);
+    log_message(LOG_INFO, "Authentication SUCCESS for user: %s", username);
 
     // --- Command loop ---
     while (1) {
@@ -63,6 +70,7 @@ void *handle_client(void *arg) {
 
         buffer[bytes] = '\0';
         printf("[%s] Command: %s\n", user->username, buffer);
+        log_message(LOG_INFO, "Command from [%s]: %s", user->username, buffer);
 
         if (strncmp(buffer, "upload ", 7) == 0) {
             if (strcmp(user->role, "modify") != 0 && strcmp(user->role, "write") != 0) {
@@ -128,6 +136,7 @@ void *handle_client(void *arg) {
 
             fclose(fp);
             printf("Upload complete.\n");
+            log_message(LOG_INFO, "Upload complete for file: %s by user: %s", filename, user->username);
             send(client_socket, "Upload successful", 18, 0);
 
         } else if (strncmp(buffer, "download ", 9) == 0) {
@@ -184,6 +193,8 @@ void *handle_client(void *arg) {
             // Send EOF to signal end
             send(client_socket, buffer, 1, 0);
             printf("Sent file %s to client for download.\n", filename);
+            log_message(LOG_INFO, "File %s sent to client %s for download.", filename, user->username);
+
         } else if (strncmp(buffer, "modify ", 7) == 0) {
             if (strcmp(user->role, "modify") != 0) {
                 send(client_socket, "Permission denied", 18, 0);
@@ -259,8 +270,10 @@ void *handle_client(void *arg) {
             release_file_access(filename, WRITE_MODE);
             send(client_socket, "Modification saved", 18, 0);
             printf("File %s modified by client %s.\n", filename, user->username);
+            log_message(LOG_INFO, "Modification complete for file: %s by user: %s", filename, user->username);
         } 
         else if(strncmp(buffer, "list", 4) == 0) {
+            log_message(LOG_INFO, "User [%s] requested file listing.", user->username);
             DIR *dir;
             struct dirent *entry;
             char filepath[BUFFER_SIZE];
@@ -288,12 +301,13 @@ void *handle_client(void *arg) {
         }
         
         else {
+            log_message(LOG_ERROR, "Unknown command from user [%s]: %s", user->username, buffer);
             char msg[BUFFER_SIZE];
             snprintf(msg, BUFFER_SIZE, "[%s]: I received: %s", user->username, buffer);
             send(client_socket, msg, strlen(msg) + 1, 0);
         }
     }
-
+    log_message(LOG_INFO, "Client [%s] disconnected.", user->username);
     close(client_socket);
     return NULL;
 } 

@@ -5,6 +5,7 @@
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 #include <time.h>
+#include "logger.h"
 
 // Global user database
 static User users[100];

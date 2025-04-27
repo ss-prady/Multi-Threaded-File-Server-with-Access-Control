@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <ifaddrs.h>  
+#include "logger.h"
 
 // Signal handler for graceful shutdown
 void handle_signal(int signal) {
@@ -20,19 +21,31 @@ int start_server() {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
+    // Initialize logger
+    if (init_logger("server.log")!=0) {
+        fprintf(stderr, "Failed to initialize logger. Exiting.\n");
+        exit(EXIT_FAILURE);
+    }
+    log_message(LOG_INFO, "Server starting up...");
+
     // Load user database
+    log_message(LOG_INFO, "Loading user database...");
     load_users("users");
+    log_message(LOG_INFO, "User database loaded successfully.");
     
     // Initialize file handler
+    log_message(LOG_INFO, "Initializing file handler...");
     if (file_handler_init() != 0) {
         fprintf(stderr, "Failed to initialize file handler\n");
         exit(EXIT_FAILURE);
     }
+    log_message(LOG_INFO, "File handler initialized successfully.");
     
     // Set up signal handlers for graceful shutdown
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
-
+    signal(SIGQUIT, handle_signal);
+    
     // Create socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0); // TCP 
     if (server_fd == 0) {
@@ -103,6 +116,7 @@ int start_server() {
 
     close(server_fd);
     file_handler_cleanup();
+    close_logger();
     return 0;
 }
 

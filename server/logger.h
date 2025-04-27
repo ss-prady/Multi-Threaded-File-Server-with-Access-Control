@@ -1,9 +1,19 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-void log_info(const char *format, ...);
-void log_warning(const char *format, ...);
-void log_error(const char *format, ...);
-void log_message(const char *format, ...);
+#include <stdio.h>
+#include <pthread.h>
 
-#endif
+// Log levels
+typedef enum {
+    LOG_INFO,
+    LOG_ERROR,
+    LOG_DEBUG
+} LogLevel;
+
+// Functions
+int init_logger(const char *filename);
+void close_logger();
+void log_message(LogLevel level, const char *format, ...);
+
+#endif // LOGGER_H

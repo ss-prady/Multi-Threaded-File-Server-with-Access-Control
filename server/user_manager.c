@@ -3,6 +3,7 @@
 #include <string.h>
 #include "user_auth.h"
 #include <openssl/evp.h>
+#include "logger.h"
 
 void print_usage(const char *program_name) {
     printf("Usage: %s [options]\n", program_name);
