@@ -19,7 +19,6 @@ echo "----------------------------------------------"
 echo "[*] Preparing user accounts..."
 cd server
 
-# Loop: ask whether to add a user; if yes, prompt for details and call user_manager.sh
 while true; do
   read -p "Do you want to add a user? (y/n) " yn
   case "$yn" in
